@@ -1,33 +1,45 @@
 import pandas as pd
-import ast
+import networkx as nx
+import random
 
-# Load the original dataset
-df = pd.read_csv("path_data.csv")
+# Define the graph
+edges = [
+    ("lobby", "lift"), ("lift", "stairs"), ("stairs", "hallway"),
+    ("stairs", "washroom"), ("hallway", "cafeteria"), ("cafeteria", "exit"),
+    ("exit", "office2"), ("office2", "office1"), ("office1", "gym"), ("gym", "washroom")
+]
+G = nx.Graph()
+G.add_edges_from(edges)
+nodes = list(G.nodes)
 
-# Container for new rows
-step_rows = []
+# Parameters
+num_rows = 600
+generated_rows = []
 
-# Iterate through each row to generate step-wise data
-for _, row in df.iterrows():
-    start = row["start"]
-    goal = row["goal"]
-    path = ast.literal_eval(row["preferred_path"])  # Convert stringified list to actual list
-    distance = row["distance"]
-    turns = row["turns"]
+# Generate paths
+while len(generated_rows) < num_rows:
+    start = random.choice(nodes)
+    goal = random.choice(nodes)
+    if start == goal:
+        continue
+    try:
+        path = nx.shortest_path(G, start, goal)
+        total_distance = round(random.uniform(5.0, 20.0), 2)
+        total_turns = random.randint(1, 4)
+        for i in range(len(path) - 1):
+            generated_rows.append({
+                "start": path[i],
+                "goal": goal,
+                "next_preferred_node": path[i + 1],
+                "distance": total_distance,
+                "turns": total_turns
+            })
+            if len(generated_rows) >= num_rows:
+                break
+    except nx.NetworkXNoPath:
+        continue
 
-    # For each hop in the path, add a row (except last node)
-    for i in range(len(path) - 1):
-        step_rows.append({
-            "current_node": path[i],
-            "target_node": goal,
-            "next_node": path[i + 1],
-            "distance": distance,
-            "turns": turns
-        })
-
-# Create the new DataFrame
-step_df = pd.DataFrame(step_rows)
-
-# Save to CSV
-step_df.to_csv("step_data.csv", index=False)
-print("✅ Step-wise dataset saved as step_data.csv")
+# Save
+df = pd.DataFrame(generated_rows)
+df.to_csv("step_data2.csv", index=False)
+print(f"✅ Generated {len(df)} rows and saved to step_data.csv")
